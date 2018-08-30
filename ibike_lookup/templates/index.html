@@ -165,7 +165,12 @@
 
     // send_data = {job: 'update', area: checked_list}
     function update() {
-
+        $.post('', {job: 'update', area: checked_list}).always(function () {
+            console.log('送出更新');
+        }).done(function (data) {
+            handle_data(data);
+            console.log('更新成功');
+        });
     };
 
     function remove(area) {
