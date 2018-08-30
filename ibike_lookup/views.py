@@ -51,7 +51,17 @@ def index(request):
             objects = station.objects.none()
         return render(request, 'index.html', {'areas': areas, 'objects': objects, 'data': data})
     elif request.method == 'POST':
-        pass
+        job = request.POST.get('job', '')
+        result = dict()
+        if job == 'update':
+            data = dict(request.POST).get('area[]', list())
+            objects = station.objects.all().order_by('area', 'location')
+            if len(data) > 0:
+                for each in data:
+                    result[each] = [{'loc': detail.location, 'bikes': detail.bikes, 'spaces': detail.spaces,
+                                     'time': detail.updatetime.astimezone().strftime('%Y-%m-%d %H:%M:%S')} for detail in
+                                    objects.filter(area=each)]
+        return JsonResponse(result)
     else:
         return HttpResponse(status=403)
 
