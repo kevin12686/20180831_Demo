@@ -88,7 +88,9 @@
             </form>
         </div>
     </div>
-    
+    <div align="right" style="padding-right: 10px; padding-bottom: 10px;">
+        <span id="cound_down_span"></span>秒後更新
+    </div>
     <div class="section">
         <table width="100%" style="border-collapse: collapse;">
             <thead style="background-color: #ffd540;">
@@ -128,6 +130,20 @@
     let table_color = ['A1', 'B2'];
     let tbody = $('#data_list');
 
+    let count_down_sel = $("#cound_down_span");
+    let interval = 10;
+    let remain_time = interval;
+    let timer;
+
+    function count_down() {
+        if (--remain_time < 1) {
+            remain_time = interval;
+            if (checked_list.length > 0)
+                update();
+        }
+        count_down_sel.text(remain_time);
+        setTimeout(count_down, 1000);
+    }
 
     function handle_data(data) {
         let next_color = tr_objs.length > 0 ? table_color.indexOf($(tr_objs[tr_objs.length - 1]).children().first().attr('class')) : table_color.length - 1;
@@ -165,6 +181,7 @@
 
     // send_data = {job: 'update', area: checked_list}
     function update() {
+        remain_time = interval;
         $.post('', {job: 'update', area: checked_list}).always(function () {
             console.log('送出更新');
         }).done(function (data) {
@@ -220,6 +237,8 @@
             }
         });
 
+        count_down_sel.text(remain_time);
+        timer = setTimeout(count_down, 1000);
     });
 </script>
 </body>
