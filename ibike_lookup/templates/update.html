@@ -1,0 +1,82 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="zh-tw">
+<head>
+    <meta charset="UTF-8">
+    <script src="{% static 'jquery.min-3.3.1.js' %}"></script>
+    <title>更新狀態</title>
+</head>
+<body>
+<div style="width: 100%; font-family: '標楷體'; font-size: 30px;">
+    <div align="middle"
+         style="position: fixed; top: 30%; margin-left: 25%; margin-right: 25%; width: 50%;border: solid 1px; padding: 30px 0px 30px 0px;">
+        剩餘時間: <span id="span_timer"></span>秒
+        <div style="padding-top: 20px;">
+            <button id="btn_start" onclick="start();">開始</button>
+            <button id="btn_stop" onclick="stop();" disabled>停止</button>
+            {% if startup %}
+                <button id="btn_hurry" onclick="hurry();">第一次匯入資料</button>
+            {% endif %}
+        </div>
+    </div>
+</div>
+<script>
+    let wait = 60;
+    let timer;
+    let flag = false;
+
+    $.ajaxSetup({
+        headers: {"X-CSRFToken": '{{csrf_token}}'}
+    });
+
+    function update() {
+        $.post('', {job: 'update'}, function (data) {
+            if (data['status'])
+                console.log('更新成功');
+            else
+                console.log('更新失敗');
+        });
+    }
+
+    function count_down() {
+        let timer = $("#span_timer");
+        let sec = parseInt(timer.text());
+        sec--;
+        if (sec < 0) {
+            sec = wait;
+            update();
+        }
+        timer.text(sec);
+        if (flag)
+            setTimeout(count_down, 1000);
+    }
+
+    function start() {
+        flag = true;
+        $("#span_timer").text(wait);
+        $('#btn_start').attr('disabled', '');
+        timer = setTimeout(count_down, 1000);
+        $('#btn_stop').removeAttr('disabled');
+    }
+
+    function stop() {
+        flag = false;
+        $('#btn_stop').attr('disabled', '');
+        clearTimeout(timer);
+        $('#btn_start').removeAttr('disabled');
+    }
+
+    {% if startup %}
+        function hurry() {
+            $("#btn_hurry").attr('disabled', '');
+            update();
+        }
+    {% endif %}
+
+    $(document).ready(function () {
+        $("#span_timer").text(0);
+    });
+</script>
+</body>
+</html>

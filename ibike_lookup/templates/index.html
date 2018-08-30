@@ -1,0 +1,221 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="zh-tw">
+<head>
+    <meta charset="UTF-8">
+    <script src="{% static 'jquery.min-3.3.1.js' %}"></script>
+    <title>ibike即時查詢系統</title>
+    <style>
+        .container {
+            font-family: Microsoft JhengHei;
+            position: relative;
+            width: auto;
+            padding: 10px auto;
+            overflow: hidden;
+            background-color: white;
+        }
+
+        .nav {
+            margin-bottom: 10px;
+            display: block;
+            width: auto;
+            border: solid 1px #d6d6d6;
+            border-radius: 5px;
+            padding: 10px;
+        }
+
+        .section {
+            display: block;
+            width: auto;
+            border: solid 1px #d6d6d6;
+            border-radius: 5px;
+            padding: 10px;
+        }
+
+        .title {
+            margin: 10px auto;
+            padding: 10px 10px 10px 10px;
+            min-width: fit-content;
+            width: auto;
+            height: 30px;
+            text-align: center;
+        }
+
+        .A1 {
+            padding: 5px 0px;
+            height: 20px;
+            text-align: center;
+            min-width: fit-content;
+            background-color: white;
+        }
+
+        .B2 {
+            padding: 5px 0px;
+            height: 20px;
+            text-align: center;
+            min-width: fit-content;
+            background-color: #efecf0;
+        }
+
+    </style>
+</head>
+<body>
+<div class="container">
+    <div align="right"><a href="{% url 'update' %}"
+                          style="text-decoration: none; color: white; cursor: default;">update</a></div>
+    <div class="nav">
+        <div style="margin-bottom: 10px; width: fit-content;font-weight: bold; font-size: 25px; border-bottom: #FFCC33 3px solid;">
+            選擇區域
+        </div>
+        <div>
+            <form method="get">
+                {% for area in areas %}
+                    <div style="display: inline-block;">
+                        {% if area in data %}
+                            <input type="checkbox" name="area" value="{{ area }}" checked>{{ area }}
+                        {% else %}
+                            <input type="checkbox" name="area" value="{{ area }}">{{ area }}
+                        {% endif %}
+                    </div>
+                {% endfor %}
+                <div align="middle" style="padding-top: 10px;">
+                    <label for="form_submit">
+                        <span style="cursor: pointer; background-color: #d6d6d6; padding: 3px 15px">送出</span>
+                    </label>
+                </div>
+                <input id="form_submit" type="submit" hidden>
+            </form>
+        </div>
+    </div>
+    
+    <div class="section">
+        <table width="100%" style="border-collapse: collapse;">
+            <thead style="background-color: #ffd540;">
+            <tr>
+                <th class="title">區域</th>
+                <th class="title">租賃點</th>
+                <th class="title">可借車輛</th>
+                <th class="title">可停空位</th>
+                <th class="title">最後更新時間</th>
+            </tr>
+            </thead>
+            <tbody id="data_list">
+            {% for object in objects %}
+                <tr>
+                    <td class="{% cycle 'A1' 'B2' as class %}">{{ object.area }}</td>
+                    <td class="{{ class }}">{{ object.location }}</td>
+                    <td class="{{ class }}">{{ object.bikes }}</td>
+                    <td class="{{ class }}">{{ object.spaces }}</td>
+                    <td class="{{ class }}">{{ object.updatetime|date:'Y-m-d H:i:s' }}</td>
+                </tr>
+            {% endfor %}
+
+            </tbody>
+        </table>
+    </div>
+</div>
+<script>
+    $.ajaxSetup({
+        headers: {"X-CSRFToken": '{{csrf_token}}'}
+    });
+
+    let check_boxs = $("input");
+    let checked_list = [];
+    let tr_list = [];
+    let tr_objs = $('#data_list > tr');
+
+    let table_color = ['A1', 'B2'];
+    let tbody = $('#data_list');
+
+
+    function handle_data(data) {
+        let next_color = tr_objs.length > 0 ? table_color.indexOf($(tr_objs[tr_objs.length - 1]).children().first().attr('class')) : table_color.length - 1;
+        $.each(data, function (key, list) {
+            let tr_idx = $.inArray(key, tr_list);
+            if (tr_idx === -1) {
+                tr_list.push(key);
+                $.each(list, function (tag, value) {
+                    next_color = (next_color + 1) % table_color.length;
+                    let tr = $('<tr></tr>');
+                    $('<td></td>').attr('class', table_color[next_color]).text(key).appendTo(tr);
+                    $('<td></td>').attr('class', table_color[next_color]).text(value['loc']).appendTo(tr);
+                    $('<td></td>').attr('class', table_color[next_color]).text(value['bikes']).appendTo(tr);
+                    $('<td></td>').attr('class', table_color[next_color]).text(value['spaces']).appendTo(tr);
+                    $('<td></td>').attr('class', table_color[next_color]).text(value['time']).appendTo(tr);
+                    tr.appendTo(tbody);
+                    tr_objs.push(tr[0]);
+                });
+            }
+            else {
+                let key_obj = tr_objs.filter(function (idx, obj) {
+                    return $(obj).children().first().text() === key;
+                });
+                $.each(list, function (tag, value) {
+                    let target_tr = key_obj.filter(function (idx, obj) {
+                        return $(obj).children().eq(1).text() === value['loc'];
+                    });
+                    let bike = target_tr.children().eq(2);
+                    bike.text(value['bikes']).next().text(value['spaces']).next().text(value['time']);
+                });
+            }
+        });
+    }
+
+
+    // send_data = {job: 'update', area: checked_list}
+    function update() {
+
+    };
+
+    function remove(area) {
+        let remove_list = [];
+        let tr_i = $.inArray(area, tr_list);
+        if (tr_i !== -1) {
+            tr_list.splice(tr_i, 1);
+        }
+        $.each(tr_objs, function (key, element) {
+            let target = $(element);
+            let area_name = target.children().first().text();
+            if (area_name === area) {
+                remove_list.push(key);
+                target.remove();
+            }
+        });
+        for (let i = 0; i < remove_list.length; i++) {
+            tr_objs.splice(remove_list[i] - i, 1);
+        }
+    }
+
+    $(document).ready(function () {
+        let get_data = decodeURIComponent(window.location.href);
+        if (get_data.indexOf('?') !== -1) {
+            get_data = get_data.split('?')[1].replace(/\area=/g, '').replace('/\a /g', '').split('&');
+        }
+        else {
+            get_data = [];
+        }
+        if (get_data.length > 0) {
+            $.each(get_data, function (key, value) {
+                checked_list.push($('input[value="' + value + '"]').first().val());
+            });
+            tr_list = checked_list.slice();
+        }
+        check_boxs.on('change', function () {
+            let obj = $(this);
+            let value = obj.val();
+            let index = $.inArray(value, checked_list);
+            if (obj.is(':checked') && index === -1) {
+                checked_list.push(value);
+                update();
+            }
+            else if (!obj.is(':checked') && index !== -1) {
+                checked_list.splice(index, 1);
+                remove(value);
+            }
+        });
+
+    });
+</script>
+</body>
+</html>
